@@ -2,22 +2,34 @@ package com.chatx;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 public class ChatxApplication {
     private static WebSocketClient client;
+    private static String username;
 
     public static void main(String[] args) {
         try {
+            promptForUsername();
             connectToWebSocket();
             handleInput();
         } catch (Exception e) {
             System.err.println("Fatal error: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private static void promptForUsername() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter your username: ");
+        username = scanner.nextLine();
     }
 
     private static void connectToWebSocket() throws URISyntaxException, InterruptedException {
@@ -27,6 +39,14 @@ public class ChatxApplication {
             @Override
             public void onOpen(ServerHandshake handshakedata) {
                 System.out.println("Connected to: " + getURI());
+                // Send the username to the server in JSON format
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    String jsonUsername = objectMapper.writeValueAsString(Collections.singletonMap("name", username));
+                    client.send(jsonUsername);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             @Override
@@ -49,6 +69,9 @@ public class ChatxApplication {
                         break;
                     case 1006:
                         message = "Connection failed (check server)";
+                        break;
+                    case 1011:
+                        message = "Server error or unexpected condition: " + reason;
                         break;
                     default:
                         message = "Closed with code: " + code + " - Reason: " + reason;
@@ -85,8 +108,17 @@ public class ChatxApplication {
         while (true) {
             String message = scanner.nextLine();
             if (!message.isEmpty() && client.isOpen()) {
-                client.send(message);
-                System.out.println("You: " + message);
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    Map<String, String> messageMap = new HashMap<>();
+                    messageMap.put("name", username);
+                    messageMap.put("message", message);
+                    String jsonMessage = objectMapper.writeValueAsString(messageMap);
+                    client.send(jsonMessage);
+                    System.out.println("You: " + message);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             } else {
                 System.out.println("Error: Not connected to server or empty message!");
             }
