@@ -11,25 +11,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+import static com.chatx.config.GetClientDetails.checkExistingClient;
+
 public class ChatxApplication {
     private static WebSocketClient client;
     private static String username;
 
     public static void main(String[] args) {
         try {
-            promptForUsername();
+            username = checkExistingClient();
             connectToWebSocket();
             handleInput();
         } catch (Exception e) {
             System.err.println("Fatal error: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    private static void promptForUsername() {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter your username: ");
-        username = scanner.nextLine();
     }
 
     private static void connectToWebSocket() throws URISyntaxException, InterruptedException {
